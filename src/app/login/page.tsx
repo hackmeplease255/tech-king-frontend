@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import { Zap } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export default function LoginPage() {
@@ -25,50 +26,75 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-white">🤖 TECH KING AUTOMATION</h1>
-          <p className="mt-1 text-sm text-slate-400">Fast. Free. Smart. Reliable.</p>
+          <div className="neon-fill mx-auto grid size-16 place-items-center rounded-3xl font-display text-2xl font-bold">
+            TK
+          </div>
+          <h1 className="mt-4 font-display text-3xl font-bold text-foreground">TECH KING AUTOMATION</h1>
+          <p className="label-caps mt-2 text-muted-foreground">Fast. Free. Smart. Reliable.</p>
         </div>
-        <form onSubmit={onSubmit} className="card space-y-4">
-          <div>
-            <label className="label">Email</label>
-            <input
-              type="email"
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-            />
+
+        <form onSubmit={onSubmit} className="glass-panel rounded-3xl p-7">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="email" className="label">Email</label>
+              <div className="glass-input rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-primary">
+                <input
+                  id="email"
+                  type="email"
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="password" className="label">Password</label>
+              <div className="glass-input rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-primary">
+                <input
+                  id="password"
+                  type="password"
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="label">Password</label>
-            <input
-              type="password"
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              autoComplete="current-password"
-            />
-          </div>
-          {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
-          <button type="submit" className="btn-primary w-full" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
+
+          {error && (
+            <div className="mt-4 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="neon-fill mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="label-caps text-sm">{busy ? 'Signing in…' : 'Sign in'}</span>
+            <Zap className="size-4" />
           </button>
-          <p className="text-center text-sm text-slate-400">
+
+          <p className="label-caps mt-5 text-center text-muted-foreground">
             No account?{' '}
-            <Link href="/register" className="text-brand-500 hover:underline">
+            <Link href="/register" className="neon-text hover:underline">
               Register
             </Link>
           </p>
         </form>
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Login required — dashboard is protected. No credentials are stored in the frontend.
+
+        <p className="label-caps mt-6 text-center text-muted-foreground/50">
+          Login required — dashboard is protected
         </p>
       </div>
     </div>

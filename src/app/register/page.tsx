@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Zap } from 'lucide-react';
 import { register as apiRegister } from '@/lib/api/auth';
 import { setToken } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth-context';
@@ -42,36 +43,63 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-white">Create account</h1>
-          <p className="mt-1 text-sm text-slate-400">The first account on a fresh install becomes the owner.</p>
+          <div className="neon-fill mx-auto grid size-16 place-items-center rounded-3xl font-display text-2xl font-bold">
+            TK
+          </div>
+          <h1 className="mt-4 font-display text-3xl font-bold text-foreground">Create account</h1>
+          <p className="label-caps mt-2 text-muted-foreground">
+            The first account on a fresh install becomes the owner
+          </p>
         </div>
-        <form onSubmit={onSubmit} className="card space-y-4">
-          <div>
-            <label className="label">Full name</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" required />
+
+        <form onSubmit={onSubmit} className="glass-panel rounded-3xl p-7">
+          <div className="space-y-4">
+            {(
+              [
+                { id: 'name', type: 'text', label: 'Full name', value: name, set: setName, placeholder: 'Jane Doe' },
+                { id: 'email', type: 'email', label: 'Email', value: email, set: setEmail, placeholder: 'you@example.com' },
+                { id: 'password', type: 'password', label: 'Password', value: password, set: setPassword, placeholder: 'Min 8 characters' },
+                { id: 'confirm', type: 'password', label: 'Confirm password', value: confirm, set: setConfirm, placeholder: 'Repeat password' },
+              ] as const
+            ).map((f) => (
+              <div key={f.id}>
+                <label htmlFor={f.id} className="label">{f.label}</label>
+                <div className="glass-input rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-primary">
+                  <input
+                    id={f.id}
+                    type={f.type}
+                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                    value={f.value}
+                    onChange={(e) => f.set(e.target.value)}
+                    placeholder={f.placeholder}
+                    required
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-          <div>
-            <label className="label">Email</label>
-            <input type="email" className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required autoComplete="email" />
-          </div>
-          <div>
-            <label className="label">Password</label>
-            <input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 characters" required autoComplete="new-password" />
-          </div>
-          <div>
-            <label className="label">Confirm password</label>
-            <input type="password" className="input" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Repeat password" required autoComplete="new-password" />
-          </div>
-          {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
-          <button type="submit" className="btn-primary w-full" disabled={busy}>
-            {busy ? 'Creating…' : 'Create account'}
+
+          {error && (
+            <div className="mt-4 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="neon-fill mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="label-caps text-sm">{busy ? 'Creating…' : 'Create account'}</span>
+            <Zap className="size-4" />
           </button>
-          <p className="text-center text-sm text-slate-400">
+
+          <p className="label-caps mt-5 text-center text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="text-brand-500 hover:underline">
+            <Link href="/login" className="neon-text hover:underline">
               Sign in
             </Link>
           </p>

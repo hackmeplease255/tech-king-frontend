@@ -2,42 +2,237 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Tech King Automation — neon console design system ─────────────────── */
+
 :root {
   color-scheme: dark;
+  --radius: 1rem;
+
+  --background: oklch(0.14 0.008 285);
+  --foreground: oklch(0.97 0.005 300);
+  --card: oklch(0.18 0.012 288);
+  --card-foreground: oklch(0.97 0.005 300);
+  --popover: oklch(0.19 0.014 288);
+  --popover-foreground: oklch(0.97 0.005 300);
+  --primary: oklch(0.68 0.23 303);
+  --primary-foreground: oklch(0.16 0.02 300);
+  --secondary: oklch(0.24 0.016 290);
+  --secondary-foreground: oklch(0.95 0.005 300);
+  --muted: oklch(0.23 0.014 290);
+  --muted-foreground: oklch(0.68 0.02 292);
+  --accent: oklch(0.28 0.05 300);
+  --accent-foreground: oklch(0.97 0.005 300);
+  --destructive: oklch(0.6 0.21 20);
+  --destructive-foreground: oklch(0.98 0.005 300);
+  --border: oklch(0.3 0.02 292 / 60%);
+  --input: oklch(0.26 0.018 292);
+  --ring: oklch(0.68 0.23 303);
+
+  --neon: oklch(0.68 0.23 303);
+  --neon-soft: oklch(0.78 0.16 305);
+  --success: oklch(0.75 0.18 158);
+  --warning: oklch(0.82 0.16 85);
+  --danger: oklch(0.65 0.2 22);
+  --surface: oklch(0.17 0.012 288);
+  --surface-2: oklch(0.21 0.016 290);
+
+  --gradient-neon: linear-gradient(135deg, oklch(0.68 0.23 303), oklch(0.8 0.15 320));
+  --gradient-glass: linear-gradient(
+    160deg,
+    oklch(1 0 0 / 6%),
+    oklch(1 0 0 / 1%) 45%,
+    oklch(0.68 0.23 303 / 6%)
+  );
+  --shadow-neon: 0 18px 50px -18px oklch(0.68 0.23 303 / 65%);
+  --shadow-panel: 0 24px 60px -30px oklch(0 0 0 / 90%);
 }
 
-body {
-  @apply bg-slate-950 text-slate-100 antialiased;
+@layer base {
+  * {
+    border-color: var(--color-border, oklch(0.3 0.02 292 / 60%));
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    background-image:
+      radial-gradient(900px 500px at 12% -10%, oklch(0.68 0.23 303 / 18%), transparent 70%),
+      radial-gradient(700px 420px at 95% 8%, oklch(0.7 0.13 250 / 10%), transparent 70%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
 }
 
-.card {
-  @apply rounded-xl border border-slate-800 bg-slate-900/60 p-4;
-}
+@layer components {
+  .label-caps {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
 
-.btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
-}
+  .glass-panel {
+    background-image: var(--gradient-glass);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-panel);
+  }
 
-.btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700;
-}
+  .neon-fill {
+    background-image: var(--gradient-neon);
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow-neon);
+  }
 
-.btn-secondary {
-  @apply btn border border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700;
-}
+  .neon-text {
+    color: var(--neon-soft);
+  }
 
-.btn-danger {
-  @apply btn bg-red-600 text-white hover:bg-red-700;
-}
+  .glass-input {
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+  }
 
-.input {
-  @apply w-full rounded-lg border border-slate-700 bg-slate-800/70 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500;
-}
+  .glass-input:focus-within {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring) 30%, transparent);
+  }
 
-.label {
-  @apply mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400;
-}
+  /* ── Compatibility layer (used across pages) ── */
+  .card {
+    background-image: var(--gradient-glass);
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-panel);
+    border-radius: 1.5rem;
+    padding: 1.25rem;
+  }
 
-.badge {
-  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  .btn-primary {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background-image: var(--gradient-neon);
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow-neon);
+    border-radius: 9999px;
+    padding: 0.625rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: transform 0.15s ease;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-primary:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    transform: none;
+  }
+
+  .btn-secondary {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background-color: var(--surface-2);
+    color: var(--muted-foreground);
+    border-radius: 9999px;
+    padding: 0.625rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--accent);
+    color: var(--foreground);
+  }
+
+  .btn-secondary:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .btn-danger {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border: 1px solid color-mix(in oklch, var(--danger) 40%, transparent);
+    background-color: color-mix(in oklch, var(--danger) 10%, transparent);
+    color: var(--danger);
+    border-radius: 9999px;
+    padding: 0.625rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background-color 0.15s ease;
+  }
+
+  .btn-danger:hover {
+    background-color: color-mix(in oklch, var(--danger) 20%, transparent);
+  }
+
+  .btn-danger:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .input {
+    width: 100%;
+    border-radius: 1rem;
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    color: var(--foreground);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .input::placeholder {
+    color: color-mix(in oklch, var(--muted-foreground) 60%, transparent);
+  }
+
+  .input:focus {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring) 30%, transparent);
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border-radius: 9999px;
+    padding: 0.125rem 0.625rem;
+  }
 }

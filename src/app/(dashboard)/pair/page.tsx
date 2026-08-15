@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import { KeyRound, QrCode, Terminal, Zap } from 'lucide-react';
 import { pairSession, listSessions, type Session } from '@/lib/api/sessions';
 import { onEvent } from '@/lib/socket';
-import { Card, ErrorBox, PageHeader, Spinner, StatusBadge } from '@/components/ui';
+import { ErrorBox, PageHeader, Spinner, StatusBadge } from '@/components/ui';
 
 export default function PairPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionId, setSessionId] = useState('');
   const [phone, setPhone] = useState('');
+  const [mode, setMode] = useState<'qr' | 'pair'>('pair');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -20,7 +22,6 @@ export default function PairPage() {
     });
   }, [sessionId]);
 
-  // Auto-clear the code once the phone pairs
   useEffect(() => {
     return onEvent<{ sessionId: string }>('session.connected', ({ sessionId: sid }) => {
       if (sid === sessionId) setCode('');
@@ -43,74 +44,137 @@ export default function PairPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl">
-      <PageHeader
-        title="Pair WhatsApp"
-        subtitle="Step 1 — choose a session and enter the WhatsApp number to link."
-      />
+    <div className="mx-auto flex max-w-3xl flex-col gap-5">
+      <PageHeader title="Connect Device" subtitle="Link your WhatsApp account securely" />
 
-      <Card>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="label">Session</label>
-            <select className="input" value={sessionId} onChange={(e) => setSessionId(e.target.value)} required>
-              {sessions.length === 0 && <option value="">No sessions — create one first</option>}
-              {sessions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.status})
-                </option>
-              ))}
-            </select>
+      {sessions.length === 0 && (
+        <ErrorBox message="Create a session first on the Sessions page, then come back to pair it." />
+      )}
+
+      <section className="glass-panel rounded-3xl p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Terminal className="mt-1 size-5 text-primary" />
+            <div>
+              <h2 className="font-display text-xl font-bold text-foreground">Connect Your Device</h2>
+              <p className="label-caps mt-1 text-muted-foreground">Link your account securely</p>
+            </div>
           </div>
-          <div>
-            <label className="label">WhatsApp number (with country code, e.g. 2557XXXXXXXX)</label>
-            <input
-              className="input"
-              placeholder="255712345678"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-              inputMode="numeric"
-            />
+          <div className="mt-2 flex gap-1.5">
+            <span className="size-2 rounded-full bg-muted-foreground/40" />
+            <span className="size-2 rounded-full bg-muted-foreground/40" />
+            <span className="size-2 rounded-full bg-muted-foreground/40" />
           </div>
-          {error && <ErrorBox message={error} />}
-          <button type="submit" className="btn-primary w-full" disabled={busy || sessions.length === 0}>
-            {busy ? 'Starting…' : 'Get pairing code'}
+        </div>
+
+        <div className="mt-6 inline-flex rounded-full bg-surface-2 p-1">
+          {(
+            [
+              { id: 'qr', label: 'QR Code', icon: QrCode },
+              { id: 'pair', label: 'Pairing Code', icon: KeyRound },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setMode(tab.id)}
+              className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition-all ${
+                mode === tab.id ? 'neon-fill' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <tab.icon className="size-3.5" />
+              <span className="label-caps">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={onSubmit} className="mt-7">
+          <div>
+            <label htmlFor="session" className="label-caps text-muted-foreground">Session</label>
+            <div className="glass-input mt-3 rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-primary">
+              <select
+                id="session"
+                value={sessionId}
+                onChange={(e) => setSessionId(e.target.value)}
+                className="w-full bg-transparent text-sm outline-none [&>option]:bg-surface"
+                required
+              >
+                {sessions.length === 0 && <option value="">No sessions — create one first</option>}
+                {sessions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} · {s.status}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="phone" className="label-caps text-muted-foreground">Phone number</label>
+              <span className="label-caps neon-text">Format: 2557…</span>
+            </div>
+            <div className="glass-input mt-3 flex items-center gap-3 rounded-2xl px-5 py-4 focus-within:ring-2 focus-within:ring-primary">
+              <span className="text-lg text-muted-foreground">+</span>
+              <input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                inputMode="numeric"
+                placeholder="2557…"
+                required
+                className="w-full bg-transparent text-lg outline-none placeholder:text-muted-foreground/60"
+              />
+            </div>
+            <p className="label-caps mt-3 text-muted-foreground/70">
+              * Omit leading zero. Include country prefix.
+            </p>
+          </div>
+
+          {error && <div className="mt-4"><ErrorBox message={error} /></div>}
+
+          <button
+            type="submit"
+            disabled={busy || sessions.length === 0}
+            className="neon-fill mt-7 flex w-full items-center justify-center gap-2 rounded-2xl py-4 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="label-caps text-sm">
+              {busy ? 'Starting…' : mode === 'qr' ? 'Generate QR code' : 'Request pairing code'}
+            </span>
+            <Zap className="size-4" />
           </button>
         </form>
-      </Card>
+      </section>
 
       {code && (
-        <Card className="mt-4 border-brand-500/40">
-          <h2 className="mb-1 text-sm font-semibold text-white">Pairing code</h2>
-          <p className="text-xs text-slate-400">
-            Open WhatsApp on your phone → Settings → Linked devices → <b>Link with phone number</b> → enter:
+        <section className="glass-panel rounded-3xl p-6">
+          <h2 className="font-display text-lg font-bold text-foreground">Pairing code</h2>
+          <p className="label-caps mt-1 text-muted-foreground">
+            Open WhatsApp → Settings → Linked devices → Link with phone number → enter:
           </p>
-          <p className="my-4 select-all rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-center font-mono text-2xl font-bold tracking-widest text-brand-400">
+          <p className="neon-fill my-5 select-all rounded-2xl px-6 py-6 text-center font-display text-3xl font-bold tracking-[0.25em]">
             {code}
           </p>
-          <p className="text-xs text-slate-500">
-            After linking, a <b>64-character session credential</b> is sent to that WhatsApp number. Keep it secret — you will use it
-            to attach the session to any deployment.
+          <p className="label-caps text-muted-foreground/70">
+            After linking, a 64-character session credential is sent to that WhatsApp number — keep it secret.
           </p>
-        </Card>
+        </section>
       )}
 
       {sessions.length > 0 && (
-        <div className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold text-slate-400">Sessions</h2>
-          <div className="space-y-2">
+        <section className="glass-panel rounded-3xl p-6">
+          <h2 className="font-display text-lg font-bold text-foreground">Sessions</h2>
+          <ul className="mt-4 flex flex-col gap-3">
             {sessions.map((s) => (
-              <Card key={s.id} className="flex items-center justify-between py-3">
+              <li key={s.id} className="flex items-center justify-between gap-4 rounded-2xl bg-surface-2/70 px-4 py-3.5">
                 <div>
-                  <p className="font-medium text-white">{s.name}</p>
-                  <p className="text-xs text-slate-500">{s.phone ? `+${s.phone}` : 'Not paired'}</p>
+                  <p className="font-medium text-foreground">{s.name}</p>
+                  <p className="label-caps mt-1 text-muted-foreground">{s.phone ? `+${s.phone}` : 'Not paired'}</p>
                 </div>
                 <StatusBadge status={s.status} />
-              </Card>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
     </div>
   );
