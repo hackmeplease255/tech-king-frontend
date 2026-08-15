@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { Copy, Check, KeyRound, QrCode, Terminal, Zap } from 'lucide-react';
-import { pairSession, listSessions, type Session } from '@/lib/api/sessions';
+import { createSession, pairSession, listSessions, type Session } from '@/lib/api/sessions';
 import { onEvent } from '@/lib/socket';
 import { ErrorBox, PageHeader, Spinner, StatusBadge } from '@/components/ui';
 
@@ -50,7 +50,15 @@ export default function PairPage() {
     setCode('');
     setBusy(true);
     try {
-      const { pairingCode } = await pairSession(sessionId, phone);
+      let targetId = sessionId;
+      // No session yet? Auto-create one from the phone number (no extra step for the user).
+      if (!targetId) {
+        const { session } = await createSession(`WhatsApp +${phone}`);
+        setSessions((prev) => [session, ...prev]);
+        setSessionId(session.id);
+        targetId = session.id;
+      }
+      const { pairingCode } = await pairSession(targetId, phone);
       setCode(pairingCode);
     } catch (err) {
       setError((err as Error).message);
@@ -72,10 +80,6 @@ export default function PairPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <PageHeader title="Connect Device" subtitle="Link your WhatsApp account securely" />
-
-      {sessions.length === 0 && (
-        <ErrorBox message="Create a session first on the Sessions page, then come back to pair it." />
-      )}
 
       <section className="glass-panel rounded-3xl p-6">
         <div className="flex items-start justify-between gap-4">
@@ -114,25 +118,30 @@ export default function PairPage() {
         </div>
 
         <form onSubmit={onSubmit} className="mt-7">
-          <div>
-            <label htmlFor="session" className="label-caps text-muted-foreground">Session</label>
-            <div className="glass-input mt-3 rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-primary">
-              <select
-                id="session"
-                value={sessionId}
-                onChange={(e) => setSessionId(e.target.value)}
-                className="w-full bg-transparent text-sm outline-none [&>option]:bg-surface"
-                required
-              >
-                {sessions.length === 0 && <option value="">No sessions — create one first</option>}
-                {sessions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} · {s.status}
-                  </option>
-                ))}
-              </select>
+          {sessions.length > 0 && (
+            <div>
+              <label htmlFor="session" className="label-caps text-muted-foreground">Session</label>
+              <div className="glass-input mt-3 rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-primary">
+                <select
+                  id="session"
+                  value={sessionId}
+                  onChange={(e) => setSessionId(e.target.value)}
+                  className="w-full bg-transparent text-sm outline-none [&>option]:bg-surface"
+                >
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} · {s.status}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
+          {sessions.length === 0 && (
+            <p className="label-caps mt-2 text-muted-foreground/70">
+              No session yet — one will be created for you automatically when you request the code.
+            </p>
+          )}
 
           <div className="mt-5">
             <div className="flex items-center justify-between">
@@ -160,7 +169,7 @@ export default function PairPage() {
 
           <button
             type="submit"
-            disabled={busy || sessions.length === 0}
+            disabled={busy || !phone}
             className="neon-fill mt-7 flex w-full items-center justify-center gap-2 rounded-2xl py-4 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="label-caps text-sm">
