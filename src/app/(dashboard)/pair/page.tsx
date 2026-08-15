@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { KeyRound, QrCode, Terminal, Zap } from 'lucide-react';
+import { Copy, Check, KeyRound, QrCode, Terminal, Zap } from 'lucide-react';
 import { pairSession, listSessions, type Session } from '@/lib/api/sessions';
 import { onEvent } from '@/lib/socket';
 import { ErrorBox, PageHeader, Spinner, StatusBadge } from '@/components/ui';
@@ -12,6 +12,8 @@ export default function PairPage() {
   const [phone, setPhone] = useState('');
   const [mode, setMode] = useState<'qr' | 'pair'>('pair');
   const [code, setCode] = useState('');
+  const [credential, setCredential] = useState('');
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -22,10 +24,24 @@ export default function PairPage() {
     });
   }, [sessionId]);
 
+  // Auto-clear the pairing code once the phone pairs
   useEffect(() => {
     return onEvent<{ sessionId: string }>('session.connected', ({ sessionId: sid }) => {
       if (sid === sessionId) setCode('');
     });
+  }, [sessionId]);
+
+  // One-time credential: the bot sends it to WhatsApp AND the site shows it here once.
+  useEffect(() => {
+    return onEvent<{ sessionId: string; credential?: string }>(
+      'session.credential',
+      ({ sessionId: sid, credential: cred }) => {
+        if (sid === sessionId && cred) {
+          setCredential(cred);
+          setCopied(false);
+        }
+      }
+    );
   }, [sessionId]);
 
   async function onSubmit(e: FormEvent) {
@@ -40,6 +56,16 @@ export default function PairPage() {
       setError((err as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function copyCredential() {
+    try {
+      await navigator.clipboard.writeText(credential);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
     }
   }
 
@@ -155,7 +181,33 @@ export default function PairPage() {
             {code}
           </p>
           <p className="label-caps text-muted-foreground/70">
-            After linking, a 64-character session credential is sent to that WhatsApp number — keep it secret.
+            After linking, the bot sends your SESSION message to that WhatsApp number — keep the credential secret.
+          </p>
+        </section>
+      )}
+
+      {credential && (
+        <section className="glass-panel rounded-3xl border-success/40 p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="font-display text-lg font-bold text-success">🌟 Session generated</h2>
+              <p className="label-caps mt-1 text-muted-foreground">
+                Shown once — also sent to your WhatsApp. Use it to connect/deploy.
+              </p>
+            </div>
+            <button
+              onClick={() => void copyCredential()}
+              className="flex items-center gap-2 rounded-full border border-success/40 bg-success/10 px-4 py-2.5 text-success transition-colors hover:bg-success/20"
+            >
+              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              <span className="label-caps">{copied ? 'Copied' : 'Copy'}</span>
+            </button>
+          </div>
+          <p className="mt-4 select-all break-all rounded-2xl bg-surface-2/80 px-5 py-4 font-mono text-sm text-foreground ring-1 ring-border">
+            {credential}
+          </p>
+          <p className="label-caps mt-3 text-muted-foreground/70">
+            Paste it into the “WhatsApp Session / Session ID” field on the Sessions page to attach this session.
           </p>
         </section>
       )}

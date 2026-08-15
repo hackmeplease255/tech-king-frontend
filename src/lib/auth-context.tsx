@@ -32,6 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+    // Ensure the middleware presence cookie exists for server-side protection.
+    document.cookie = 'tk_auth=1; path=/; max-age=604800; SameSite=Lax';
     me()
       .then(({ user }) => setUser(user))
       .catch(() => setToken(null))

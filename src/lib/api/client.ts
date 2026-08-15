@@ -15,8 +15,13 @@ export function getToken(): string | null {
 
 export function setToken(token: string | null): void {
   if (typeof window === 'undefined') return;
-  if (token) localStorage.setItem('tk_token', token);
-  else localStorage.removeItem('tk_token');
+  if (token) {
+    localStorage.setItem('tk_token', token);
+    document.cookie = 'tk_auth=1; path=/; max-age=604800; SameSite=Lax';
+  } else {
+    localStorage.removeItem('tk_token');
+    document.cookie = 'tk_auth=; path=/; max-age=0';
+  }
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
