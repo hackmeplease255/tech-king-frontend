@@ -1,48 +1,21 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { Copy, Check, KeyRound, QrCode, Terminal, Zap } from 'lucide-react';
-import { createSession, pairSession, listSessions, type Session } from '@/lib/api/sessions';
-import { onEvent } from '@/lib/socket';
-import { ErrorBox, PageHeader, Spinner, StatusBadge } from '@/components/ui';
+import { KeyRound, QrCode, Terminal, Zap } from 'lucide-react';
+import { createSession, listSessions, pairSession, type Session } from '@/lib/api/sessions';
+import { ErrorBox } from '@/components/ui';
 
 export default function PairPage() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [sessionId, setSessionId] = useState('');
-  const [phone, setPhone] = useState('');
   const [mode, setMode] = useState<'qr' | 'pair'>('pair');
+  const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
-  const [credential, setCredential] = useState('');
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   useEffect(() => {
-    void listSessions().then(({ sessions }) => {
-      setSessions(sessions);
-      if (sessions.length > 0 && !sessionId) setSessionId(sessions[0].id);
-    });
-  }, [sessionId]);
-
-  // Auto-clear the pairing code once the phone pairs
-  useEffect(() => {
-    return onEvent<{ sessionId: string }>('session.connected', ({ sessionId: sid }) => {
-      if (sid === sessionId) setCode('');
-    });
-  }, [sessionId]);
-
-  // One-time credential: the bot sends it to WhatsApp AND the site shows it here once.
-  useEffect(() => {
-    return onEvent<{ sessionId: string; credential?: string }>(
-      'session.credential',
-      ({ sessionId: sid, credential: cred }) => {
-        if (sid === sessionId && cred) {
-          setCredential(cred);
-          setCopied(false);
-        }
-      }
-    );
-  }, [sessionId]);
+    void listSessions().then(({ sessions }) => setSessions(sessions));
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -50,15 +23,15 @@ export default function PairPage() {
     setCode('');
     setBusy(true);
     try {
-      let targetId = sessionId;
-      // No session yet? Auto-create one from the phone number (no extra step for the user).
-      if (!targetId) {
-        const { session } = await createSession(`WhatsApp +${phone}`);
-        setSessions((prev) => [session, ...prev]);
-        setSessionId(session.id);
-        targetId = session.id;
+      // Reuse an existing session for this number, otherwise auto-create one.
+      const clean = phone.replace(/[^\d]/g, '');
+      let session = sessions.find((s) => s.phone === clean);
+      if (!session) {
+        const created = await createSession(`WhatsApp +${clean}`);
+        session = created.session;
+        setSessions((prev) => [created.session, ...prev]);
       }
-      const { pairingCode } = await pairSession(targetId, phone);
+      const { pairingCode } = await pairSession(session.id, clean);
       setCode(pairingCode);
     } catch (err) {
       setError((err as Error).message);
@@ -67,37 +40,25 @@ export default function PairPage() {
     }
   }
 
-  async function copyCredential() {
-    try {
-      await navigator.clipboard.writeText(credential);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* clipboard unavailable */
-    }
-  }
-
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <PageHeader title="Connect Device" subtitle="Link your WhatsApp account securely" />
+    <div className="mx-auto max-w-xl">
+      <h1 className="font-display text-2xl font-bold text-foreground">Connect Your Device</h1>
+      <p className="label-caps mt-1 text-muted-foreground">Link your WhatsApp account securely</p>
 
-      <section className="glass-panel rounded-3xl p-6">
+      <section className="glass-panel mt-5 rounded-3xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <Terminal className="mt-1 size-5 text-primary" />
-            <div>
-              <h2 className="font-display text-xl font-bold text-foreground">Connect Your Device</h2>
-              <p className="label-caps mt-1 text-muted-foreground">Link your account securely</p>
-            </div>
+            <Terminal className="mt-0.5 size-4 text-primary" />
+            <p className="label-caps text-muted-foreground">Link your account securely</p>
           </div>
-          <div className="mt-2 flex gap-1.5">
-            <span className="size-2 rounded-full bg-muted-foreground/40" />
-            <span className="size-2 rounded-full bg-muted-foreground/40" />
-            <span className="size-2 rounded-full bg-muted-foreground/40" />
+          <div className="mt-1 flex gap-1.5">
+            <span className="size-1.5 rounded-full bg-muted-foreground/40" />
+            <span className="size-1.5 rounded-full bg-muted-foreground/40" />
+            <span className="size-1.5 rounded-full bg-muted-foreground/40" />
           </div>
         </div>
 
-        <div className="mt-6 inline-flex rounded-full bg-surface-2 p-1">
+        <div className="mt-5 inline-flex rounded-full bg-surface-2 p-1">
           {(
             [
               { id: 'qr', label: 'QR Code', icon: QrCode },
@@ -107,7 +68,7 @@ export default function PairPage() {
             <button
               key={tab.id}
               onClick={() => setMode(tab.id)}
-              className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition-all ${
+              className={`flex items-center gap-2 rounded-full px-4 py-2 transition-all ${
                 mode === tab.id ? 'neon-fill' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -117,39 +78,14 @@ export default function PairPage() {
           ))}
         </div>
 
-        <form onSubmit={onSubmit} className="mt-7">
-          {sessions.length > 0 && (
-            <div>
-              <label htmlFor="session" className="label-caps text-muted-foreground">Session</label>
-              <div className="glass-input mt-3 rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-primary">
-                <select
-                  id="session"
-                  value={sessionId}
-                  onChange={(e) => setSessionId(e.target.value)}
-                  className="w-full bg-transparent text-sm outline-none [&>option]:bg-surface"
-                >
-                  {sessions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} · {s.status}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-          {sessions.length === 0 && (
-            <p className="label-caps mt-2 text-muted-foreground/70">
-              No session yet — one will be created for you automatically when you request the code.
-            </p>
-          )}
-
-          <div className="mt-5">
+        <form onSubmit={onSubmit} className="mt-6">
+          <div>
             <div className="flex items-center justify-between">
               <label htmlFor="phone" className="label-caps text-muted-foreground">Phone number</label>
               <span className="label-caps neon-text">Format: 2557…</span>
             </div>
-            <div className="glass-input mt-3 flex items-center gap-3 rounded-2xl px-5 py-4 focus-within:ring-2 focus-within:ring-primary">
-              <span className="text-lg text-muted-foreground">+</span>
+            <div className="glass-input mt-2 flex items-center gap-2 rounded-xl px-4 py-3 focus-within:ring-2 focus-within:ring-primary">
+              <span className="text-sm text-muted-foreground">+</span>
               <input
                 id="phone"
                 value={phone}
@@ -157,12 +93,10 @@ export default function PairPage() {
                 inputMode="numeric"
                 placeholder="2557…"
                 required
-                className="w-full bg-transparent text-lg outline-none placeholder:text-muted-foreground/60"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
               />
             </div>
-            <p className="label-caps mt-3 text-muted-foreground/70">
-              * Omit leading zero. Include country prefix.
-            </p>
+            <p className="label-caps mt-2 text-muted-foreground/60">* Omit leading zero. Include country prefix.</p>
           </div>
 
           {error && <div className="mt-4"><ErrorBox message={error} /></div>}
@@ -170,71 +104,27 @@ export default function PairPage() {
           <button
             type="submit"
             disabled={busy || !phone}
-            className="neon-fill mt-7 flex w-full items-center justify-center gap-2 rounded-2xl py-4 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+            className="neon-fill mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="label-caps text-sm">
               {busy ? 'Starting…' : mode === 'qr' ? 'Generate QR code' : 'Request pairing code'}
             </span>
-            <Zap className="size-4" />
+            <Zap className="size-3.5" />
           </button>
         </form>
       </section>
 
       {code && (
-        <section className="glass-panel rounded-3xl p-6">
-          <h2 className="font-display text-lg font-bold text-foreground">Pairing code</h2>
-          <p className="label-caps mt-1 text-muted-foreground">
+        <section className="glass-panel mt-4 rounded-3xl p-6">
+          <p className="label-caps text-muted-foreground">
             Open WhatsApp → Settings → Linked devices → Link with phone number → enter:
           </p>
-          <p className="neon-fill my-5 select-all rounded-2xl px-6 py-6 text-center font-display text-3xl font-bold tracking-[0.25em]">
+          <p className="mt-3 select-all rounded-xl bg-surface-2/80 px-4 py-4 text-center font-mono text-xl font-semibold tracking-widest text-foreground ring-1 ring-border">
             {code}
           </p>
-          <p className="label-caps text-muted-foreground/70">
-            After linking, the bot sends your SESSION message to that WhatsApp number — keep the credential secret.
+          <p className="label-caps mt-3 text-muted-foreground/60">
+            After linking, your session is sent to that WhatsApp number automatically.
           </p>
-        </section>
-      )}
-
-      {credential && (
-        <section className="glass-panel rounded-3xl border-success/40 p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="font-display text-lg font-bold text-success">🌟 Session generated</h2>
-              <p className="label-caps mt-1 text-muted-foreground">
-                Shown once — also sent to your WhatsApp. Use it to connect/deploy.
-              </p>
-            </div>
-            <button
-              onClick={() => void copyCredential()}
-              className="flex items-center gap-2 rounded-full border border-success/40 bg-success/10 px-4 py-2.5 text-success transition-colors hover:bg-success/20"
-            >
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              <span className="label-caps">{copied ? 'Copied' : 'Copy'}</span>
-            </button>
-          </div>
-          <p className="mt-4 select-all break-all rounded-2xl bg-surface-2/80 px-5 py-4 font-mono text-sm text-foreground ring-1 ring-border">
-            {credential}
-          </p>
-          <p className="label-caps mt-3 text-muted-foreground/70">
-            Paste it into the “WhatsApp Session / Session ID” field on the Sessions page to attach this session.
-          </p>
-        </section>
-      )}
-
-      {sessions.length > 0 && (
-        <section className="glass-panel rounded-3xl p-6">
-          <h2 className="font-display text-lg font-bold text-foreground">Sessions</h2>
-          <ul className="mt-4 flex flex-col gap-3">
-            {sessions.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-4 rounded-2xl bg-surface-2/70 px-4 py-3.5">
-                <div>
-                  <p className="font-medium text-foreground">{s.name}</p>
-                  <p className="label-caps mt-1 text-muted-foreground">{s.phone ? `+${s.phone}` : 'Not paired'}</p>
-                </div>
-                <StatusBadge status={s.status} />
-              </li>
-            ))}
-          </ul>
         </section>
       )}
     </div>
