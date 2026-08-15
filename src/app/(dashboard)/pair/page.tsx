@@ -24,13 +24,19 @@ export default function PairPage() {
     setBusy(true);
     try {
       // Reuse an existing session for this number, otherwise auto-create one.
+      // Note: a session only gets a phone once paired, so match by name too —
+      // otherwise every click spawns a duplicate session.
       const clean = phone.replace(/[^\d]/g, '');
-      let session = sessions.find((s) => s.phone === clean);
+      const latest = await listSessions();
+      const all = latest.sessions;
+      let session = all.find((s) => s.phone === clean)
+        || all.find((s) => s.name === `WhatsApp +${clean}`)
+        || all.find((s) => !s.credential_attached && !s.phone);
       if (!session) {
         const created = await createSession(`WhatsApp +${clean}`);
         session = created.session;
-        setSessions((prev) => [created.session, ...prev]);
       }
+      setSessions(all);
       const { pairingCode } = await pairSession(session.id, clean);
       setCode(pairingCode);
     } catch (err) {
